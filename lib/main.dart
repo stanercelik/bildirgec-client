@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'views/guess_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const BildirgecApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BildirgecApp extends StatelessWidget {
+  const BildirgecApp({super.key});
 
   @override
   Widget build(BuildContext context) {
