@@ -1,19 +1,21 @@
+import 'package:contexto_turkish/controllers/guess_view_controller.dart';
+import 'package:contexto_turkish/models/guess.dart';
+import 'package:contexto_turkish/views/guess_list_item.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class ShowHowToDialog extends StatelessWidget {
-  const ShowHowToDialog(
-      {Key? key,
-      required this.title,
-      required this.content,
-      required this.icon})
+class ShowClosestWordsDialog extends StatelessWidget {
+  const ShowClosestWordsDialog(
+      {Key? key, required this.title, required this.icon})
       : super(key: key);
 
   final String title;
-  final String content;
   final IconData icon;
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(GuessViewController());
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Stack(
@@ -46,24 +48,34 @@ class ShowHowToDialog extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: constraints.maxHeight < 500
-                            ? constraints.maxHeight
-                            : 500,
-                      ),
-                      child: SingleChildScrollView(
-                        child: Text(
-                          content,
-                          style: const TextStyle(
-                              fontSize: 16, color: Colors.white),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: controller.fetchClosestWords(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Hata: ${snapshot.error}'));
+                    } else if (snapshot.hasData) {
+                      final closestWords = snapshot.data!;
+                      return Expanded(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: closestWords.length,
+                          itemBuilder: (context, index) {
+                            final guess = Guess(
+                              word: closestWords[index]['word'],
+                              distance: closestWords[index]['rank'],
+                            );
+                            return GuessListItem(guess: guess);
+                          },
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      return const Center(child: Text('Veri bulunamadı.'));
+                    }
                   },
-                ),
+                )
               ],
             ),
           ),
@@ -91,14 +103,12 @@ class ShowHowToDialog extends StatelessWidget {
   }
 }
 
-void showHowToDialog(
-    BuildContext context, String title, String content, IconData icon) {
+void showClosestWordsDialog(BuildContext context, String title, IconData icon) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      return ShowHowToDialog(
+      return ShowClosestWordsDialog(
         title: title,
-        content: content,
         icon: icon,
       );
     },

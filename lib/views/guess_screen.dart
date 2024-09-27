@@ -1,3 +1,4 @@
+import 'package:contexto_turkish/utils/show_closest_words.dart';
 import 'package:contexto_turkish/utils/show_how_to_dialog.dart';
 import 'package:contexto_turkish/views/guess_list_item.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,6 @@ class GuessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(GuessViewController());
-    //var textFieldController = TextEditingController();
 
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
@@ -39,7 +39,7 @@ class GuessScreen extends StatelessWidget {
                   showHowToDialog(
                       context,
                       "Nasıl Oynanır",
-                      "Gizli kelimeyi bulun. Sınırsız tahmin hakkınız var.\n\nTahmin ettiğiniz keliemler, gizli kelimeye ne kadar benzediğine göre bir yapay zeka algoritması tarafından sıralanır.\n\nBir kelimeyi tahminledikten sonra, onun sırasını göreceksiniz. Gizli kelime 1. sırada, gizli kelimeye en uzak kelime ise 15000. sıradadır.\n\nAlgoritma binlerce metni analiz etti. Kelimeler arasındaki benzerliği hesaplamak için kelimelerin hangi bağlamda kullanıldığını dikkate alır.",
+                      "Gizli kelimeyi bulun. Sınırsız tahmin hakkınız var.\n\nTahmin ettiğiniz kelimeler, gizli kelimeye ne kadar benzediğine göre bir yapay zeka algoritması tarafından sıralanır.\n\nBir kelimeyi tahmin ettikten sonra, onun sırasını göreceksiniz. Gizli kelime 1. sırada, gizli kelimeye en uzak kelime ise 15000. sıradadır.\n\nAlgoritma binlerce metni analiz etti. Kelimeler arasındaki benzerliği hesaplamak için kelimelerin hangi bağlamda kullanıldığını dikkate alır.",
                       Icons.question_mark_rounded);
                   break;
                 case 'howItWork':
@@ -51,7 +51,13 @@ class GuessScreen extends StatelessWidget {
                   break;
                 case 'giveUp':
                   if (!controller.isGameOver.value) {
-                    controller.giveUp();
+                    controller.giveUp(context);
+                  }
+                  break;
+                case 'hint':
+                  if (!controller.isHintsFinished.value &&
+                      !controller.isGameOver.value) {
+                    controller.getHint();
                   }
                   break;
                 case 'settings':
@@ -83,6 +89,22 @@ class GuessScreen extends StatelessWidget {
                       Icon(Icons.question_answer_rounded, color: Colors.white),
                       SizedBox(width: 8),
                       Text('Algoritma Mantığı',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  enabled: !controller.isHintsFinished.value &&
+                      !controller.isGameOver.value,
+                  value: 'hint',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lightbulb_rounded, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('İpucu Al',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -125,139 +147,221 @@ class GuessScreen extends StatelessWidget {
         ],
         backgroundColor: const Color(0xff15202B),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Guess TextField
-            TextField(
-              cursorColor: Colors.white,
-              onChanged: (value) {
-                controller.guessText.value = value;
-              },
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-              decoration: const InputDecoration(
-                hintText: 'Tahmininizi Girin',
-                hintStyle: TextStyle(
-                  color: Color(0xff757575),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Guess TextField
+              TextField(
+                cursorColor: Colors.white,
+                onChanged: (value) {
+                  controller.guessText.value = value;
+                },
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 16,
                 ),
-                labelStyle: TextStyle(color: Colors.white),
-                border: OutlineInputBorder(
-                  borderSide:
-                      BorderSide(color: Colors.white, width: 2), // Kalınlık 2
+                decoration: const InputDecoration(
+                  hintText: 'Tahmininizi Girin',
+                  hintStyle: TextStyle(
+                    color: Color(0xff757575),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                  labelStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.blueGrey, width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Color(0xff263340),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white, width: 2),
-                ),
-                disabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueGrey, width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white, width: 2),
-                ),
-                filled: true,
-                fillColor: Color(0xff263340),
               ),
-            ),
-            SizedBox(height: screenHeight * 0.02),
+              SizedBox(height: screenHeight * 0.02),
 
-            Obx(() => controller.isGameOver.value
-                ? Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Sonuç mesajı
-                        Obx(() => Text(
-                              controller.resultMessage.value,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.start,
-                            )),
-                        const SizedBox(height: 20),
-                        // Kopyala butonu
-                        ElevatedButton(
-                          onPressed: controller.copyResult,
-                          child: const Text('Sonucu Kopyala'),
-                        ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink()),
-
-            // Hata mesajını göstermek için Obx kullanıyoruz
-            Obx(() => controller.errorMessage.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      controller.errorMessage.value,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  )
-                : const SizedBox.shrink()),
-
-            SizedBox(height: screenHeight * 0.02),
-
-            // Guess Button
-            controller.isGameOver.value
-                ? const SizedBox.shrink()
-                : SizedBox(
-                    width: screenWidth * 0.4,
-                    height: screenHeight * 0.06,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff1C9BEF),
-                        shape: RoundedRectangleBorder(
+              Obx(
+                () => controller.isGameOver.value
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xff1E2732),
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Sonuç mesajı
+                              Obx(() {
+                                final status = controller.statusMessage.value;
+                                final emoji = controller.emojiMessage.value;
+
+                                if (status.isNotEmpty && emoji.isNotEmpty) {
+                                  return Column(
+                                    children: [
+                                      Text(
+                                        status,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      Text(
+                                        emoji,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.start,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }),
+                              const SizedBox(height: 20),
+
+                              SizedBox(
+                                width: screenWidth * 0.4,
+                                height: screenHeight * 0.06,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xff1C9BEF),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    controller.copyResult;
+                                  },
+                                  child: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      "Sonucu Kopyala",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              SizedBox(
+                                width: screenWidth * 0.4,
+                                height: screenHeight * 0.06,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xff1C9BEF),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    showClosestWordsDialog(context,
+                                        "En yakın kelimeler", Icons.book);
+                                  },
+                                  child: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      "En Yakın 500 Kelime",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18, // Varsayılan yazı boyutu
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
+              // Hata mesajını göstermek için Obx kullanıyoruz
+              Obx(() => controller.errorMessage.isNotEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        controller.errorMessage.value,
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      onPressed: () {
-                        controller.submitGuess(context);
-                        controller.guessText.value = '';
-                      },
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown, // Metni sığdırmak için
-                        child: Text(
-                          'Tahmin Gönder',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18, // Varsayılan yazı boyutu
+                    )
+                  : const SizedBox.shrink()),
+
+              SizedBox(height: screenHeight * 0.02),
+
+              // Guess Button
+              Obx(
+                () => controller.isGameOver.value
+                    ? const SizedBox.shrink()
+                    : SizedBox(
+                        width: screenWidth * 0.4,
+                        height: screenHeight * 0.06,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff1C9BEF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () {
+                            controller.submitGuess(context);
+                            controller.guessText.value = '';
+                          },
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Tahmin Gönder',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-            SizedBox(height: screenHeight * 0.02),
-            GetX<GuessViewController>(
-              builder: (controller) {
-                return controller.guesses.isNotEmpty
-                    ? GuessListItem(
-                        guess: controller.lastGuess.value,
-                        isLastGuess: true,
-                      )
-                    : const SizedBox.shrink();
-              },
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            Expanded(
-              child: Obx(() => ListView.builder(
+              ),
+              SizedBox(height: screenHeight * 0.02),
+              GetX<GuessViewController>(
+                builder: (controller) {
+                  return controller.guesses.isNotEmpty
+                      ? GuessListItem(
+                          guess: controller.lastGuess.value,
+                          isLastGuess: true,
+                        )
+                      : const SizedBox.shrink();
+                },
+              ),
+              SizedBox(height: screenHeight * 0.02),
+              Obx(() => ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: controller.guesses.length,
                     itemBuilder: (context, index) {
                       final guess = controller.guesses[index];
                       return GuessListItem(guess: guess);
                     },
                   )),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
