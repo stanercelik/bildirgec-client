@@ -10,7 +10,7 @@ class GuessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(GuessViewController());
-    var textFieldController = TextEditingController();
+    //var textFieldController = TextEditingController();
 
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
@@ -19,7 +19,7 @@ class GuessScreen extends StatelessWidget {
       backgroundColor: const Color(0xff15202B),
       appBar: AppBar(
         title: const Text(
-          'ANLAMSAL',
+          'BİLDİRGEÇ',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -50,7 +50,9 @@ class GuessScreen extends StatelessWidget {
                       Icons.question_answer_rounded);
                   break;
                 case 'giveUp':
-                  controller.giveUp();
+                  if (!controller.isGameOver.value) {
+                    controller.giveUp();
+                  }
                   break;
                 case 'settings':
                   print("settings");
@@ -88,9 +90,10 @@ class GuessScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
+                  enabled: !controller.isGameOver.value,
                   value: 'giveUp',
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.flag_rounded, color: Colors.white),
                       SizedBox(width: 8),
@@ -164,28 +167,75 @@ class GuessScreen extends StatelessWidget {
             ),
             SizedBox(height: screenHeight * 0.02),
 
+            Obx(() => controller.isGameOver.value
+                ? Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Sonuç mesajı
+                        Obx(() => Text(
+                              controller.resultMessage.value,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.start,
+                            )),
+                        const SizedBox(height: 20),
+                        // Kopyala butonu
+                        ElevatedButton(
+                          onPressed: controller.copyResult,
+                          child: const Text('Sonucu Kopyala'),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink()),
+
+            // Hata mesajını göstermek için Obx kullanıyoruz
+            Obx(() => controller.errorMessage.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      controller.errorMessage.value,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  )
+                : const SizedBox.shrink()),
+
+            SizedBox(height: screenHeight * 0.02),
+
             // Guess Button
-            SizedBox(
-              width: screenWidth * 0.4,
-              height: screenHeight * 0.05,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff1C9BEF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            controller.isGameOver.value
+                ? const SizedBox.shrink()
+                : SizedBox(
+                    width: screenWidth * 0.4,
+                    height: screenHeight * 0.06,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff1C9BEF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        controller.submitGuess(context);
+                        controller.guessText.value = '';
+                      },
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown, // Metni sığdırmak için
+                        child: Text(
+                          'Tahmin Gönder',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18, // Varsayılan yazı boyutu
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  controller.submitGuess(context);
-                  controller.guessText.value = '';
-                },
-                child: const Text('Tahmin Gönder',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
-              ),
-            ),
             SizedBox(height: screenHeight * 0.02),
             GetX<GuessViewController>(
               builder: (controller) {
